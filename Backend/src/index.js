@@ -1,3 +1,4 @@
+// src/index.js
 import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
@@ -10,17 +11,17 @@ import donationRouter from "./routes/donations.js";
 
 const app = express();
 
-// Recommended: allow multiple origins (Render + local dev). Replace or extend as needed.
+// Allowed origins: production FRONTEND_ORIGIN plus common local dev hosts
 const allowedOrigins = [
-  process.env.FRONTEND_ORIGIN,          // production origin (must be set in Render)
-  "http://localhost:5173",              // add your local frontend origin if needed
+  process.env.FRONTEND_ORIGIN,   // e.g. "https://donate-v2-jgkc.onrender.com"
+  "http://localhost:5173",
   "http://localhost:3000"
 ].filter(Boolean);
 
-// dynamic origin checker (safer than wildcard)
+// CORS options with dynamic origin check
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl) or from allowedOrigins
+    // allow requests with no origin (e.g. curl, mobile) or if origin is in allowedOrigins
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -28,23 +29,32 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization","X-Requested-With", "Accept"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 };
 
-// apply CORS
+// apply CORS globally
 app.use(cors(corsOptions));
 
-// ensure OPTIONS preflight handled (explicit)
-app.options("*", cors(corsOptions));
+// handle OPTIONS preflight with a safe regex route (avoids PathError for "*" token)
+app.options(/.*/, cors(corsOptions));
 
+// body parser & cookies
 app.use(express.json());
 app.use(cookieParser());
 
-// your routes
+// routes
 app.use("/api/user/", userRoutes);
 app.use("/api/profile/", profileRouter);
 app.use("/api/donations", donationRouter);
+
+// fallback OPTIONS responder (extra safety) — returns 204 for preflight
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 const PORT = process.env.PORT || 3000;
 console.log("MONGO_URI is:", process.env.MONGO_URI);
@@ -57,6 +67,7 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error("Failed to start server:", error);
+    process.exit(1);
   }
 };
 
