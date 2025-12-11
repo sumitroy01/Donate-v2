@@ -12,7 +12,7 @@ export function generateToken(userId, res = null, opts = {}) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", 
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: expiresInSec * 1000,
+      maxAge: 2*24*60*60*1000,
       path: "/", 
     };
 
