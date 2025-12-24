@@ -21,7 +21,7 @@ import { Toaster } from "react-hot-toast";
 
 // ✅ SAFE backend URL (prevents undefined)
 const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  import.meta.env.VITE_BACKEND_URL;
 
 function AppWrapper() {
   const { authUser, checkAuth } = userStore();
