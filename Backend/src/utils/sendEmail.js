@@ -1,42 +1,29 @@
-import nodemailer from "nodemailer";
+// backend/utils/sendEmail.js
+import sgMail from "@sendgrid/mail";
 import dotenv from "dotenv";
 dotenv.config();
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const FROM = process.env.EMAIL_FROM || "DonateUs <familybackup2580@gmail.com>";
 
-const FROM =
-  process.env.EMAIL_FROM ||
-  `SRM@apps20 <${GMAIL_USER}>`;
-
-if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-  console.warn("⚠️ Gmail SMTP env not set — emails will fail until configured.");
+if (!SENDGRID_API_KEY) {
+  console.warn("⚠️ SENDGRID_API_KEY not set — emails will fail until configured.");
+} else {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+  console.log("✅ SendGrid initialized");
 }
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: GMAIL_USER,
-    pass: GMAIL_APP_PASSWORD,
-  },
-});
-
-console.log("✅ Gmail SMTP initialized");
-
-export async function sendOtp(to, otp) {
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD)
-    throw new Error("GMAIL SMTP credentials missing");
+export async function sendOTPEmail(to, otp) {
+  if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY missing");
 
   const msg = {
-    from: FROM,
     to,
-    subject: "Your Donate-us Verification Code",
+    from: FROM, 
+    subject: "Your DonateUs verification code",
     text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
     html: `
       <div style="font-family:sans-serif;line-height:1.5">
-        <h2>Welcome to Donate-us 💸</h2>
+        <h2>Welcome to DonateUs 🎁</h2>
         <p>Your OTP is:</p>
         <h1 style="color:#007bff;">${otp}</h1>
         <p>This code expires in <strong>5 minutes</strong>.</p>
@@ -47,37 +34,35 @@ export async function sendOtp(to, otp) {
   };
 
   try {
-    const res = await transporter.sendMail(msg);
-    console.log(`✅ OTP email sent to ${to} [id ${res.messageId}]`);
+    const res = await sgMail.send(msg);
+    console.log(`✅ OTP email sent to ${to} [status ${res[0]?.statusCode}]`);
     return res;
   } catch (error) {
-    console.error(`❌ Gmail SMTP send error for ${to}:`, error.message);
+    console.error(`❌ SendGrid send error for ${to}:`, error.response?.body || error.message);
     throw new Error("Failed to send OTP email");
   }
 }
 
+
 export async function sendGenericEmail({ to, subject, text, html }) {
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD)
-    throw new Error("GMAIL SMTP credentials missing");
+  if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY missing");
 
   const msg = {
-    from: FROM,
     to,
+    from: FROM,
     subject,
     text,
     html: html || `<p>${text}</p>`,
   };
 
   try {
-    const res = await transporter.sendMail(msg);
-    console.log(`✅ Generic email sent to ${to} [id ${res.messageId}]`);
+    const res = await sgMail.send(msg);
+    console.log(`✅ Generic email sent to ${to} [status ${res[0]?.statusCode}]`);
     return res;
   } catch (error) {
-    console.error(`❌ Gmail SMTP generic send error for ${to}:`, error.message);
+    console.error(`❌ SendGrid generic send error for ${to}:`, error.response?.body || error.message);
     throw new Error("Failed to send email");
   }
 }
 
-export const sendOTPEmail = sendOtp;
-
-export default { sendOtp, sendOTPEmail, sendGenericEmail };
+export default { sendOTPEmail, sendGenericEmail };

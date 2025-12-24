@@ -126,23 +126,7 @@ const Signup = () => {
                 </button>
               </form>
 
-              <div className="my-4 text-center text-gray-500">or</div>
-              <div className="flex flex-col gap-3">
-                <button
-                  className="flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition"
-                  onClick={() => toast("Google signup not implemented")}
-                >
-                  <FaGoogle className="text-lg" />
-                  Sign Up with Google
-                </button>
-                <button
-                  className="flex items-center justify-center gap-2 bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition"
-                  onClick={() => toast("GitHub signup not implemented")}
-                >
-                  <FaGithub className="text-lg" />
-                  Sign Up with GitHub
-                </button>
-              </div>
+              
             </>
           ) : (
             <>
