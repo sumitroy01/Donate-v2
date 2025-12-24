@@ -255,3 +255,11 @@ export const resetPassword = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const healthCheck = (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "donate-backend",
+    timestamp: new Date().toISOString(),
+  });
+};

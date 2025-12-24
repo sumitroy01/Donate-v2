@@ -19,7 +19,9 @@ import Benefitted from "./pages/Benefitted.jsx";
 
 import { Toaster } from "react-hot-toast";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+// ✅ SAFE backend URL (prevents undefined)
+const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 function AppWrapper() {
   const { authUser, checkAuth } = userStore();
@@ -29,14 +31,13 @@ function AppWrapper() {
   const [backendReady, setBackendReady] = useState(false);
   const [seconds, setSeconds] = useState(0);
 
-  
-
   useEffect(() => {
     let interval;
 
     const pingBackend = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/health`);
+        // ✅ FIXED health path
+        const res = await fetch(`${BACKEND_URL}/api/user/health`);
         if (res.ok) {
           setBackendReady(true);
           clearInterval(interval);
@@ -56,7 +57,6 @@ function AppWrapper() {
     return () => clearInterval(interval);
   }, []);
 
-
   useEffect(() => {
     if (backendReady) {
       checkAuth();
@@ -75,7 +75,6 @@ function AppWrapper() {
     }
   }, [authUser, hasProfile, navigate]);
 
-  
   if (!backendReady) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white">
@@ -89,7 +88,6 @@ function AppWrapper() {
       </div>
     );
   }
-
 
   return (
     <>

@@ -8,7 +8,8 @@ import {
   requestPasswordReset,
   resetPassword,
   checkAuth, 
-  verifyOTP
+  verifyOTP,
+  healthCheck,
 } from "../controllers/user.controllers.js"; 
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.post("/resend-otp", resendOTP);
 router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
+router.get("/health",healthCheck);
 router.get("/check", protectRoute, checkAuth);
 export default router;

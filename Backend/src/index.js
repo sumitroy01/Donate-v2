@@ -15,8 +15,6 @@ const app = express();
 
 const allowedOrigins = [
   process.env.FRONTEND_ORIGIN, 
-  "http://localhost:5173",
-  "http://localhost:3000",
 ].filter(Boolean);
 
 // Dynamic CORS check
@@ -48,15 +46,6 @@ app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-
-
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    uptime: process.uptime(),
-    message: "Backend is awake",
-  });
-});
 
 
 app.use("/api/user", userRoutes);
