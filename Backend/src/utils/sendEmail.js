@@ -32,11 +32,11 @@ export async function sendOtp(to, otp) {
   const msg = {
     from: FROM,
     to,
-    subject: "Your Donate-us Verification code",
+    subject: "Your Donate-us Verification Code",
     text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
     html: `
       <div style="font-family:sans-serif;line-height:1.5">
-        <h2>Welcome to Donate-us 💸 </h2>
+        <h2>Welcome to Donate-us 💸</h2>
         <p>Your OTP is:</p>
         <h1 style="color:#007bff;">${otp}</h1>
         <p>This code expires in <strong>5 minutes</strong>.</p>
@@ -78,4 +78,6 @@ export async function sendGenericEmail({ to, subject, text, html }) {
   }
 }
 
-export default { sendOtp, sendGenericEmail };
+export const sendOTPEmail = sendOtp;
+
+export default { sendOtp, sendOTPEmail, sendGenericEmail };
