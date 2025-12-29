@@ -27,6 +27,7 @@ const UpdateProfile = () => {
     proofs: [],
     existingProofs: [],
   });
+  const [previewFiles, setPreviewFiles] = useState([]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,13 +59,11 @@ const UpdateProfile = () => {
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (files) {
-      if (name === "proofs") {
-        setForm((prev) => ({
-          ...prev,
-          proofs: [...prev.proofs, ...Array.from(files)],
-        }));
-      } else {
-        setForm((prev) => ({ ...prev, [name]: files[0] }));
+      if (name === "proofs" && files) {
+        const fileArray = Array.from(files);
+        setPreviewFiles(fileArray);
+        setForm((prev) => ({ ...prev, proofs: fileArray }));
+        return;
       }
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
@@ -88,61 +87,63 @@ const UpdateProfile = () => {
     });
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  try {
-    const fd = new FormData();
+    try {
+      const fd = new FormData();
 
-    // Add all text fields
-    fd.append("name", form.name);
-    fd.append("bio", form.bio);
-    fd.append("age", form.age);
-    fd.append("email", form.email);
-    fd.append("phone", form.phone);
-    fd.append("disease", form.disease);
-    fd.append("donationGoal", form.donationGoal);
+      // Add all text fields
+      fd.append("name", form.name);
+      fd.append("bio", form.bio);
+      fd.append("age", form.age);
+      fd.append("email", form.email);
+      fd.append("phone", form.phone);
+      fd.append("disease", form.disease);
+      fd.append("donationGoal", form.donationGoal);
 
-    // Add profile picture if selected
-    if (form.profilePic) {
-      fd.append("profilePic", form.profilePic);
+      // Add profile picture if selected
+      if (form.profilePic) {
+        fd.append("profilePic", form.profilePic);
+      }
+
+      // Add existing proofs to keep
+      form.existingProofs.forEach((proof) => {
+        fd.append("existingProofs", proof);
+      });
+
+      // Add new proofs
+      form.proofs.forEach((file) => {
+        fd.append("proofs", file);
+      });
+
+      const result = await updateProfileById({
+        id: profileId,
+        data: fd,
+      });
+
+      if (result?.success !== false) {
+        toast.success("Profile updated successfully!");
+        setIsEditing(false);
+
+        // refresh profile in place
+        await getMyProfile();
+      } else {
+        toast.error(result?.message || "Failed to update profile");
+      }
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      toast.error("Something went wrong!");
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    // Add existing proofs to keep
-    form.existingProofs.forEach((proof) => {
-      fd.append("existingProofs", proof);
-    });
-
-    // Add new proofs
-    form.proofs.forEach((file) => {
-      fd.append("proofs", file);
-    });
-
-    const result = await updateProfileById({
-      id: profileId,
-      data: fd,
-    });
-
-    if (result?.success !== false) {
-      toast.success("Profile updated successfully!");
-      setIsEditing(false);
-
-      // refresh profile in place
-      await getMyProfile();
-    } else {
-      toast.error(result?.message || "Failed to update profile");
-    }
-  } catch (err) {
-    console.error("Error updating profile:", err);
-    toast.error("Something went wrong!");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-
-
+  const isPDF = (fileOrUrl) =>
+    typeof fileOrUrl === "string"
+      ? fileOrUrl.toLowerCase().endsWith(".pdf")
+      : fileOrUrl?.type === "application/pdf";
 
   const busy = isUpdatingProfile || isSubmitting;
 
@@ -194,13 +195,29 @@ const handleSubmit = async (e) => {
                 <strong>Proofs:</strong>
                 <div className="flex gap-3 mt-2 flex-wrap">
                   {profile.proofs.map((proof, idx) => (
-                    <img
+                    <div
                       key={idx}
-                      src={proof}
-                      alt={`Proof ${idx + 1}`}
-                      className="w-24 h-24 object-cover border rounded-lg cursor-pointer hover:scale-105 transition"
-                      onClick={() => window.open(proof, "_blank")}
-                    />
+                      className="border rounded-lg p-2 flex flex-col items-center justify-center"
+                    >
+                      {proof.toLowerCase().endsWith(".pdf") ? (
+                        <>
+                          <div className="text-3xl">📄</div>
+                          <button
+                            onClick={() => window.open(proof, "_blank")}
+                            className="text-blue-600 text-xs mt-1"
+                          >
+                            View PDF
+                          </button>
+                        </>
+                      ) : (
+                        <img
+                          src={proof}
+                          alt={`Proof ${idx + 1}`}
+                          className="w-24 h-24 object-cover rounded cursor-pointer hover:scale-105"
+                          onClick={() => window.open(proof, "_blank")}
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -341,6 +358,7 @@ const handleSubmit = async (e) => {
               <label className="block text-sm font-medium text-gray-700">
                 Medical Proof / Report
               </label>
+
               <input
                 type="file"
                 name="proofs"
@@ -358,12 +376,26 @@ const handleSubmit = async (e) => {
                   </p>
                   <div className="flex gap-3 flex-wrap">
                     {form.existingProofs.map((proof, idx) => (
-                      <div key={idx} className="relative">
-                        <img
-                          src={proof}
-                          alt={`Proof ${idx + 1}`}
-                          className="w-24 h-24 object-cover border rounded-lg"
-                        />
+                      <div key={idx} className="relative border rounded-lg p-2">
+                        {proof.toLowerCase().endsWith(".pdf") ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-3xl">📄</span>
+                            <button
+                              type="button"
+                              onClick={() => window.open(proof, "_blank")}
+                              className="text-blue-600 text-xs mt-1"
+                            >
+                              View PDF
+                            </button>
+                          </div>
+                        ) : (
+                          <img
+                            src={proof}
+                            alt="Proof"
+                            className="w-24 h-24 object-cover rounded"
+                          />
+                        )}
+
                         <button
                           type="button"
                           onClick={() => handleRemoveProof(proof)}
@@ -385,12 +417,22 @@ const handleSubmit = async (e) => {
                   </p>
                   <div className="flex gap-3 flex-wrap">
                     {form.proofs.map((file, idx) => (
-                      <div key={idx} className="relative">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`New Proof ${idx + 1}`}
-                          className="w-24 h-24 object-cover border rounded-lg"
-                        />
+                      <div key={idx} className="relative border rounded-lg p-2">
+                        {file.type === "application/pdf" ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-3xl">📄</span>
+                            <p className="text-xs truncate max-w-[80px]">
+                              {file.name}
+                            </p>
+                          </div>
+                        ) : (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt="Preview"
+                            className="w-24 h-24 object-cover rounded"
+                          />
+                        )}
+
                         <button
                           type="button"
                           onClick={() => handleRemoveNewProof(idx)}
@@ -447,5 +489,3 @@ const handleSubmit = async (e) => {
 };
 
 export default UpdateProfile;
-
-

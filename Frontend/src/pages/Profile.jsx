@@ -25,11 +25,14 @@ const Profile = () => {
     disease: "",
     donationGoal: "",
     profilePic: null,
-    bio: "", // changed from background
+    bio: "",
     proofs: null,
   });
 
-  // Load profile if exists
+  const [previewFiles, setPreviewFiles] = useState([]);
+
+  const isPDF = (file) => file?.type === "application/pdf";
+
   useEffect(() => {
     (async () => {
       const exists = await checkProfile();
@@ -51,7 +54,6 @@ const Profile = () => {
     })();
   }, []);
 
-  // Prefill form if profile is found
   useEffect(() => {
     if (profile) {
       setForm({
@@ -62,7 +64,7 @@ const Profile = () => {
         disease: profile.disease || "",
         donationGoal: profile.donationGoal || "",
         profilePic: null,
-        bio: profile.bio || "", // use bio instead of background
+        bio: profile.bio || "",
         proofs: null,
       });
     }
@@ -70,18 +72,29 @@ const Profile = () => {
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: files ? (name === "proofs" ? files : files[0]) : value,
-    }));
+
+    if (name === "proofs" && files) {
+      const fileArray = Array.from(files);
+      setPreviewFiles(fileArray);
+      setForm((prev) => ({ ...prev, proofs: files }));
+      return;
+    }
+
+    if (name === "profilePic" && files) {
+      setForm((prev) => ({ ...prev, profilePic: files[0] }));
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const fd = new FormData();
     Object.keys(form).forEach((key) => {
       const val = form[key];
-      if (val !== null && val !== undefined && val !== "") {
+      if (val !== null && val !== "") {
         if (key === "proofs" && val instanceof FileList) {
           Array.from(val).forEach((file) => fd.append("proofs", file));
         } else {
@@ -96,75 +109,78 @@ const Profile = () => {
       await fillForm(fd);
     }
 
-    navigate("/"); // redirect after success
+    navigate("/");
   };
 
   const busy = isCreatingProfile || isUpdatingProfile || isLoadingProfile;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center items-start py-10 px-4">
-      <div className="bg-white w-full max-w-3xl p-8 rounded-xl shadow-md border border-gray-200">
+    <div className="min-h-screen bg-gray-100 flex justify-center py-10 px-4">
+      <div className="bg-white w-full max-w-3xl p-8 rounded-xl shadow-md border">
         <h1 className="text-3xl font-bold text-emerald-600 mb-6 text-center">
           {hasProfile ? "Edit Donation Request" : "Create Donation Request"}
         </h1>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
-            <input type="text" name="name" value={form.name} onChange={handleChange} required className="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
+          <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Full Name" className="w-full border rounded p-2" />
+          <input type="number" name="age" value={form.age} onChange={handleChange} placeholder="Age" className="w-full border rounded p-2" />
+          <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" className="w-full border rounded p-2" />
+          <input type="text" name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" className="w-full border rounded p-2" />
+          <input type="text" name="disease" value={form.disease} onChange={handleChange} placeholder="Disease" className="w-full border rounded p-2" />
+          <input type="number" name="donationGoal" value={form.donationGoal} onChange={handleChange} placeholder="Donation Goal" className="w-full border rounded p-2" />
 
-          {/* Age */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Age</label>
-            <input type="number" name="age" value={form.age} onChange={handleChange} min="1" required className="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
+          <textarea
+            name="bio"
+            value={form.bio}
+            onChange={handleChange}
+            rows="4"
+            placeholder="Bio"
+            className="w-full border rounded p-2"
+          />
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" name="email" value={form.email} onChange={handleChange} required className="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
+          <input type="file" name="profilePic" accept="image/*" onChange={handleChange} />
 
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
-            <input type="text" name="phone" value={form.phone} onChange={handleChange} required className="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
+          <input
+            type="file"
+            name="proofs"
+            multiple
+            accept="image/*,application/pdf"
+            onChange={handleChange}
+          />
 
-          {/* Disease */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Disease / Condition</label>
-            <input type="text" name="disease" value={form.disease} onChange={handleChange} required className="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
+          {/* PREVIEW */}
+          {previewFiles.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              {previewFiles.map((file, i) => (
+                <div
+                  key={i}
+                  className="border rounded-lg p-2 flex flex-col items-center justify-center bg-gray-50"
+                >
+                  {isPDF(file) ? (
+                    <>
+                      <div className="text-4xl">📄</div>
+                      <p className="text-xs mt-1 truncate">{file.name}</p>
+                    </>
+                  ) : (
+                    <img
+                      src={URL.createObjectURL(file)}
+                      className="w-full h-24 object-cover rounded"
+                      alt="preview"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Donation Goal */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Donation Goal (USD)</label>
-            <input type="number" name="donationGoal" value={form.donationGoal} onChange={handleChange} min="1" required className="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
-
-          {/* Profile Picture */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
-            <input type="file" name="profilePic" accept="image/*" onChange={handleChange} className="mt-1 w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Bio</label>
-            <textarea name="bio" value={form.bio} onChange={handleChange} rows="4" required className="mt-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500"></textarea>
-          </div>
-
-          {/* Proofs */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Medical Proof / Report</label>
-            <input type="file" name="proofs" accept="application/pdf,image/*" multiple onChange={handleChange} className="mt-1 w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500" />
-          </div>
-
-          <button type="submit" disabled={busy} className={`w-full text-white py-3 px-6 rounded-lg transition ${busy ? "bg-emerald-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
-            {busy ? (hasProfile ? "Updating..." : "Submitting...") : hasProfile ? "Update Request" : "Submit Request"}
+          <button
+            type="submit"
+            disabled={busy}
+            className={`w-full py-3 text-white rounded-lg ${
+              busy ? "bg-emerald-400" : "bg-emerald-600 hover:bg-emerald-700"
+            }`}
+          >
+            {busy ? "Submitting..." : hasProfile ? "Update Profile" : "Create Profile"}
           </button>
         </form>
       </div>

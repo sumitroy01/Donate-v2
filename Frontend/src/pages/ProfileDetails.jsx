@@ -10,235 +10,193 @@ const ProfileDetails = () => {
 
   const [profile, setProfile] = useState(null);
   const [activeIndex, setActiveIndex] = useState(null);
-  const [expanded, setExpanded] = useState(false);
   const [amount, setAmount] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
   useEffect(() => {
-    if (window.Razorpay) {
-      setScriptLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => setScriptLoaded(true);
-    script.onerror = () => setScriptLoaded(false);
-    document.body.appendChild(script);
+    if (window.Razorpay) return setScriptLoaded(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => setScriptLoaded(true);
+    document.body.appendChild(s);
   }, []);
 
   useEffect(() => {
     if (!allProfiles.length) getAllProfiles();
-  }, [allProfiles, getAllProfiles]);
+  }, [allProfiles]);
 
   useEffect(() => {
-    const found = allProfiles.find((p) => String(p._id) === String(id));
+    const found = allProfiles.find(p => String(p._id) === String(id));
     if (found) setProfile(found);
   }, [allProfiles, id]);
 
-  if (!profile) {
-    return <p className="text-center text-gray-500 mt-8">Loading profile...</p>;
-  }
+  if (!profile)
+    return <p className="text-center mt-20 text-gray-400">Loading...</p>;
 
-  // ✅ NEW
   const isGoalAchieved =
     Number(profile.donatedAmount) >= Number(profile.donationGoal);
 
   const proofs = Array.isArray(profile.proofs)
     ? profile.proofs
-    : profile.proofs
-    ? [profile.proofs]
-    : [];
+    : profile.proofs ? [profile.proofs] : [];
+
+  const isPDF = (url) => url?.toLowerCase().endsWith(".pdf");
 
   const handleDonate = async () => {
-    // ✅ HARD BLOCK
-    if (isGoalAchieved) {
-      alert("This campaign has already reached its goal 🎉");
-      return;
-    }
+    if (isGoalAchieved) return;
+    const amt = Number(amount);
+    if (!amt) return alert("Enter valid amount");
 
-    const numericAmount = Number(amount);
-    if (!numericAmount || numericAmount <= 0) {
-      alert("Please enter a valid amount");
-      return;
-    }
+    const order = await createOrder(profile._id, amt);
+    if (!order) return;
 
-    if (!scriptLoaded || !window.Razorpay) {
-      alert("Payment gateway not ready. Try again shortly.");
-      return;
-    }
-
-    const orderData = await createOrder(profile._id, numericAmount);
-    if (!orderData) {
-      window.location.href = "/";
-      return;
-    }
-
-    const options = {
-      key: orderData.key,
-      amount: Math.round(numericAmount * 100),
+    new window.Razorpay({
+      key: order.key,
+      amount: amt * 100,
       currency: "INR",
-      name: profile.name || "Donation",
-      description: "Donation",
-      order_id: orderData.orderId,
-
-      handler: async (response) => {
-        try {
-          await verifyPayment({
-            ...response,
-            profileId: profile._id,
-            amount: numericAmount,
-          });
-        } finally {
-          window.location.href = "/";
-        }
+      name: profile.name,
+      order_id: order.orderId,
+      handler: async (res) => {
+        await verifyPayment({ ...res, profileId: profile._id, amount: amt });
+        window.location.href = "/";
       },
-
-      modal: {
-        ondismiss: () => (window.location.href = "/"),
-      },
-
-      theme: { color: "#22c55e" },
-    };
-
-    new window.Razorpay(options).open();
+      theme: { color: "#10b981" }
+    }).open();
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <Link to="/" className="text-green-600 hover:underline mb-4 inline-block">
-        ← Back to Profiles
-      </Link>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-8 px-4">
+      <div className="max-w-5xl mx-auto">
 
-      <div className="bg-white shadow-lg rounded-xl p-6 overflow-hidden">
-        <div className="flex flex-col items-center text-center px-4">
-          <img
-            src={profile.profilePic || "https://via.placeholder.com/150"}
-            alt={profile.name}
-            className="w-32 h-32 rounded-full object-cover border-4 border-green-100"
-          />
-          <h1 className="text-3xl font-bold mt-4">{profile.name}</h1>
+        <Link to="/" className="text-sm text-emerald-600 hover:underline">
+          ← Back
+        </Link>
 
-          {isGoalAchieved && (
-            <span className="mt-2 bg-green-600 text-white text-sm px-3 py-1 rounded-full">
-              🎉 Goal Achieved
-            </span>
-          )}
+        <div className="mt-4 bg-white rounded-2xl shadow-md overflow-hidden">
 
-          {profile.bio ? (
-            <p
-              className={`text-gray-700 mt-2 italic max-w-xl transition-all duration-300 ${
-                expanded ? "" : "line-clamp-3"
-              }`}
-            >
-              {profile.bio}
-            </p>
-          ) : (
-            <p className="text-gray-400 mt-2 italic">No bio available</p>
-          )}
-
-          {profile.bio && profile.bio.length > 100 && (
-            <button
-              className="text-green-600 text-sm mt-2 hover:underline"
-              onClick={() => setExpanded(!expanded)}
-            >
-              {expanded ? "Read Less" : "Read More"}
-            </button>
-          )}
-        </div>
-
-        <div className="mt-6 space-y-3 text-gray-700 px-4">
-          <p><strong>Age:</strong> {profile.age || "N/A"}</p>
-          <p><strong>Email:</strong> {profile.email || "N/A"}</p>
-          <p><strong>Phone:</strong> {profile.phone || "N/A"}</p>
-          <p><strong>Disease:</strong> {profile.disease || "N/A"}</p>
-          <p><strong>Donation Goal:</strong> ₹{profile.donationGoal || 0}</p>
-        </div>
-
-        <div className="mt-6 px-4">
-          <p><strong>Collected:</strong> ₹{profile.donatedAmount || 0}</p>
-          <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
-            <div
-              className="bg-green-500 h-4 rounded-full"
-              style={{
-                width: `${Math.min(
-                  (profile.donatedAmount / profile.donationGoal) * 100,
-                  100
-                )}%`,
-              }}
+          {/* HEADER */}
+          <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+            <img
+              src={profile.profilePic || "https://via.placeholder.com/150"}
+              className="w-20 h-20 rounded-full border-2 border-white object-cover"
+              alt="profile"
             />
-          </div>
-          <p className="text-sm text-gray-600 mt-1">
-            {Math.min(
-              ((profile.donatedAmount / profile.donationGoal) * 100).toFixed(1),
-              100
-            )}
-            % of goal reached
-          </p>
-        </div>
 
-        <div className="mt-6 px-4">
-          <input
-            type="number"
-            placeholder={
-              isGoalAchieved
-                ? "Goal already achieved"
-                : "Enter donation amount"
-            }
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            disabled={isGoalAchieved}
-            className="border rounded-lg p-2 w-full mb-3 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          />
-
-          <button
-            onClick={handleDonate}
-            disabled={loading || isGoalAchieved}
-            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGoalAchieved
-              ? "Goal Achieved 🎉"
-              : loading
-              ? "Processing..."
-              : "Donate"}
-          </button>
-        </div>
-
-        {proofs.length > 0 && (
-          <div className="mt-6 px-4">
-            <h2 className="font-semibold mb-2">Proof Documents:</h2>
-            <div className="grid grid-cols-3 gap-3">
-              {proofs.map((url, idx) => (
-                <img
-                  key={idx}
-                  src={url}
-                  alt={`Proof ${idx + 1}`}
-                  className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80"
-                  onClick={() => setActiveIndex(idx)}
-                />
-              ))}
+            <div>
+              <h1 className="text-xl font-semibold">{profile.name}</h1>
+              {isGoalAchieved && (
+                <span className="text-xs bg-white/20 px-2 py-1 rounded-full mt-1 inline-block">
+                  🎉 Goal Achieved
+                </span>
+              )}
+              <p className="text-sm opacity-90 line-clamp-2 mt-1">
+                {profile.bio || "No bio provided"}
+              </p>
             </div>
+          </div>
+
+          {/* DETAILS */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 text-sm">
+            <Info label="Age" value={profile.age} />
+            <Info label="Email" value={profile.email} />
+            <Info label="Phone" value={profile.phone} />
+            <Info label="Disease" value={profile.disease} />
+            <Info label="Goal" value={`₹${profile.donationGoal}`} />
+            <Info label="Raised" value={`₹${profile.donatedAmount}`} />
+          </div>
+
+          {/* PROGRESS */}
+          <div className="px-4">
+            <div className="h-2 bg-gray-200 rounded-full">
+              <div
+                className="h-full bg-emerald-500"
+                style={{
+                  width: `${Math.min(
+                    (profile.donatedAmount / profile.donationGoal) * 100,
+                    100
+                  )}%`
+                }}
+              />
+            </div>
+          </div>
+
+          {/* DONATE */}
+          <div className="p-4 flex gap-3">
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Amount"
+              disabled={isGoalAchieved}
+              className="flex-1 border rounded-md px-3 py-2 text-sm"
+            />
+            <button
+              onClick={handleDonate}
+              disabled={loading || isGoalAchieved}
+              className="bg-emerald-600 text-white px-5 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {isGoalAchieved ? "Completed" : loading ? "..." : "Donate"}
+            </button>
+          </div>
+
+          {/* PROOFS */}
+          {proofs.length > 0 && (
+            <div className="p-4">
+              <p className="text-sm font-medium mb-2">Proofs</p>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                {proofs.map((url, i) => (
+                  <div
+                    key={i}
+                    onClick={() => setActiveIndex(i)}
+                    className="bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
+                  >
+                    {isPDF(url) ? (
+                      <div className="h-24 flex items-center justify-center text-sm">
+                        📄 PDF
+                      </div>
+                    ) : (
+                      <img src={url} className="h-24 w-full object-cover" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* MODAL */}
+        {activeIndex !== null && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <button
+              onClick={() => setActiveIndex(null)}
+              className="absolute top-6 right-6 text-white text-3xl"
+            >
+              ✕
+            </button>
+            {isPDF(proofs[activeIndex]) ? (
+              <iframe
+                src={proofs[activeIndex]}
+                className="w-[90vw] h-[80vh] bg-white rounded-xl"
+              />
+            ) : (
+              <img
+                src={proofs[activeIndex]}
+                className="max-w-[90vw] max-h-[80vh] rounded-xl"
+              />
+            )}
           </div>
         )}
       </div>
-
-      {activeIndex !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <button
-            className="absolute top-5 right-5 text-white text-3xl"
-            onClick={() => setActiveIndex(null)}
-          >
-            ✕
-          </button>
-          <img
-            src={proofs[activeIndex]}
-            alt="Proof"
-            className="max-h-[80vh] max-w-[90vw] rounded-lg"
-          />
-        </div>
-      )}
     </div>
   );
 };
+
+const Info = ({ label, value }) => (
+  <div className="bg-gray-50 p-3 rounded-lg">
+    <p className="text-xs text-gray-500">{label}</p>
+    <p className="font-medium text-gray-800">{value || "N/A"}</p>
+  </div>
+);
 
 export default ProfileDetails;
