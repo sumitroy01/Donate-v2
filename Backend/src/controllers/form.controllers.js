@@ -43,7 +43,7 @@ export const fillForm = async (req, res) => {
       userProfile,
     });
   } catch (error) {
-    console.error("Error in fillForm controller:", error);
+    console.error("Error in fillForm controller:", error.message);
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue || {})[0] || "field";
       return res.status(400).json({ message: `${field} already exists` });

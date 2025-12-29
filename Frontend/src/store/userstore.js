@@ -47,32 +47,32 @@ const userStore = create((set, get) => ({
   },
 
   // ================== VERIFY OTP ==================
-  verifyOTP: async (otp) => {
-    const { pendingUserId } = get();
-    if (!pendingUserId) {
-      toast.error("No pending user found. Please signup again.");
-      return { success: false };
+  verifyOTP: async (email, otp) => {
+  if (!email) {
+    toast.error("Email missing. Please signup again.");
+    return { success: false };
+  }
+
+  try {
+    const res = await axiosInstance.post("/api/user/verify-otp", {
+      email,
+      otp,
+    });
+
+    set({ authUser: res.data.user });
+
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token);
     }
 
-    try {
-      const res = await axiosInstance.post("/api/user/verify-otp", {
-        userId: pendingUserId,
-        otp,
-      });
+    toast.success("Account verified successfully");
+    return { success: true };
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Invalid OTP");
+    return { success: false };
+  }
+},
 
-      set({ authUser: res.data.user, pendingUserId: null });
-      if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-      }
-
-      toast.success("Account verified successfully");
-      return { success: true };
-    } catch (error) {
-      console.error("OTP verification error:", error.response?.data);
-      toast.error(error.response?.data?.message || "Invalid OTP");
-      return { success: false };
-    }
-  },
 
   // ================== RESEND OTP ==================
   resendOTP: async () => {
@@ -93,25 +93,34 @@ const userStore = create((set, get) => ({
 
   // ================== LOGIN ==================
   logIn: async (data) => {
-    set({ isLogginIn: true });
-    try {
-      const res = await axiosInstance.post("/api/user/login", data);
+  set({ isLogginIn: true });
 
-      set({ authUser: res.data.user });
-      if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-      }
+  try {
+    const res = await axiosInstance.post("/api/user/login", data);
 
-      toast.success("Logged in successfully");
-      return true;
-    } catch (error) {
-      console.error("Login error:", error.response?.data);
-      toast.error(error.response?.data?.message || "Login failed");
-      return false;
-    } finally {
-      set({ isLogginIn: false });
+    set({ authUser: res.data.user });
+
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token);
     }
-  },
+
+    toast.success("Logged in successfully");
+
+    return { success: true };
+  } catch (error) {
+    const response = error?.response?.data;
+
+    // 👇 handle unverified user
+    if (response?.requiresVerification) {
+      return { requiresVerification: true };
+    }
+
+    toast.error(response?.message || "Login failed");
+    return { success: false };
+  } finally {
+    set({ isLogginIn: false });
+  }
+},
 
   // ================== LOGOUT ==================
   logOut: async () => {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { DotLottiePlayer } from "@dotlottie/react-player";
-import { FaGoogle, FaGithub, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import userstore from "../store/userstore";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -10,12 +10,13 @@ const Signup = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState("signup");
-  const [cooldown, setCooldown] = useState(0); 
+  const [cooldown, setCooldown] = useState(0);
+  const [emailForOTP, setEmailForOTP] = useState(""); // 🔥 IMPORTANT
 
   const { signUp, verifyOTP, resendOTP, isSigningUp } = userstore();
   const navigate = useNavigate();
 
-  // ================== HANDLE SIGNUP ==================
+  // ================== SIGNUP ==================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -24,15 +25,17 @@ const Signup = () => {
       return;
     }
 
-    const result = await signUp(form);
-    if (result.success) {
-      setStep("otp"); // ✅ switch to OTP step
+    const res = await signUp(form);
+
+    if (res?.success) {
+      setEmailForOTP(form.email); // 👈 save email
+      setStep("otp");
     } else {
-      toast.error(result.message || "Signup failed");
+      toast.error(res?.message || "Signup failed");
     }
   };
 
-  // ================== HANDLE OTP VERIFY ==================
+  // ================== VERIFY OTP ==================
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
 
@@ -41,19 +44,19 @@ const Signup = () => {
       return;
     }
 
-    const result = await verifyOTP(otp);
-    if (result.success) {
-      navigate("/"); 
+    const res = await verifyOTP(emailForOTP, otp);
+
+    if (res?.success) {
+      navigate("/");
     }
   };
 
-  // ================== HANDLE RESEND OTP ==================
+  // ================== RESEND OTP ==================
   const handleResend = async () => {
     if (cooldown > 0) return;
 
-    await resendOTP();
+    await resendOTP(emailForOTP);
 
-   
     setCooldown(30);
     const timer = setInterval(() => {
       setCooldown((prev) => {
@@ -70,31 +73,34 @@ const Signup = () => {
     <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-green-800 to-green-500">
       <DotLottiePlayer
         src="https://lottie.host/967f5eba-4045-4c2a-8bc9-a4ec9a2093ba/SMIAZ04t9e.lottie"
-        speed="1"
-        className="absolute inset-0 w-full h-full z-0 object-cover"
+        className="absolute inset-0 w-full h-full"
         loop
         autoplay
       />
 
       <div className="absolute inset-0 flex items-center justify-center z-10">
-        <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md mx-auto">
+        <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md">
           {step === "signup" ? (
             <>
-              <h2 className="text-2xl font-semibold text-center mb-6">Create an Account</h2>
+              <h2 className="text-2xl font-semibold text-center mb-6">
+                Create an Account
+              </h2>
+
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <input
                   type="text"
                   placeholder="Name"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg"
                 />
+
                 <input
                   type="email"
                   placeholder="Email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg"
                 />
 
                 <div className="relative">
@@ -102,8 +108,10 @@ const Signup = () => {
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) =>
+                      setForm({ ...form, password: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg pr-10"
                   />
                   <span
                     className="absolute inset-y-0 right-3 flex items-center cursor-pointer"
@@ -116,32 +124,36 @@ const Signup = () => {
                 <button
                   type="submit"
                   disabled={isSigningUp}
-                  className={`w-full py-2 rounded-lg transition ${
-                    isSigningUp
-                      ? "bg-blue-300 cursor-not-allowed text-white"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
+                  className="w-full py-2 bg-blue-600 text-white rounded-lg"
                 >
-                  {isSigningUp ? "Signing Up..." : "Sign Up with Email"}
+                  {isSigningUp ? "Signing Up..." : "Sign Up"}
                 </button>
               </form>
-
-              
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-semibold text-center mb-6">Verify OTP</h2>
-              <form className="space-y-4" onSubmit={handleVerifyOTP}>
+              <h2 className="text-2xl font-semibold text-center mb-2">
+                Verify OTP
+              </h2>
+
+              <p className="text-sm text-gray-500 text-center mb-4">
+                Didn’t receive the email? Please check your{" "}
+                <span className="font-medium">Spam</span> or
+                <span className="font-medium"> Promotions</span> folder.
+              </p>
+
+              <form onSubmit={handleVerifyOTP} className="space-y-4">
                 <input
                   type="text"
                   placeholder="Enter OTP"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border rounded-lg"
                 />
+
                 <button
                   type="submit"
-                  className="w-full py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition"
+                  className="w-full py-2 bg-green-600 text-white rounded-lg"
                 >
                   Verify OTP
                 </button>
@@ -150,10 +162,10 @@ const Signup = () => {
               <button
                 onClick={handleResend}
                 disabled={cooldown > 0}
-                className={`mt-4 w-full py-2 rounded-lg transition ${
+                className={`mt-4 w-full py-2 rounded-lg ${
                   cooldown > 0
-                    ? "bg-yellow-300 cursor-not-allowed text-white"
-                    : "bg-yellow-500 hover:bg-yellow-600 text-white"
+                    ? "bg-yellow-300 cursor-not-allowed"
+                    : "bg-yellow-500 hover:bg-yellow-600"
                 }`}
               >
                 {cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}
@@ -167,4 +179,3 @@ const Signup = () => {
 };
 
 export default Signup;
-

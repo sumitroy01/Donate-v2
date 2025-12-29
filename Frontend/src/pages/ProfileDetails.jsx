@@ -11,7 +11,6 @@ const ProfileDetails = () => {
   const [profile, setProfile] = useState(null);
   const [activeIndex, setActiveIndex] = useState(null);
   const [amount, setAmount] = useState("");
-  const [expanded, setExpanded] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
   useEffect(() => {
@@ -73,31 +72,34 @@ const ProfileDetails = () => {
           ← Back
         </Link>
 
-        <div className="mt-4 bg-white rounded-2xl shadow-md overflow-hidden">
+        <div className="mt-4 bg-white rounded-2xl shadow-lg overflow-hidden">
 
           {/* HEADER */}
-          <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+          <div className="flex items-center gap-4 p-6 bg-gradient-to-r from-emerald-600 via-teal-500 to-sky-500 text-white">
             <img
               src={profile.profilePic || "https://via.placeholder.com/150"}
-              className="w-20 h-20 rounded-full border-2 border-white object-cover"
+              className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover cursor-pointer hover:scale-105 transition"
               alt="profile"
+              onClick={() => setActiveIndex("profile")}
             />
 
             <div>
               <h1 className="text-xl font-semibold">{profile.name}</h1>
+
               {isGoalAchieved && (
                 <span className="text-xs bg-white/20 px-2 py-1 rounded-full mt-1 inline-block">
                   🎉 Goal Achieved
                 </span>
               )}
-              <p className="text-sm opacity-90 line-clamp-2 mt-1">
+
+              <p className="text-sm mt-3 bg-white/25 backdrop-blur-md p-3 rounded-lg leading-relaxed">
                 {profile.bio || "No bio provided"}
               </p>
             </div>
           </div>
 
-          {/* DETAILS */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 text-sm">
+          {/* INFO */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
             <Info label="Age" value={profile.age} />
             <Info label="Email" value={profile.email} />
             <Info label="Phone" value={profile.phone} />
@@ -107,10 +109,10 @@ const ProfileDetails = () => {
           </div>
 
           {/* PROGRESS */}
-          <div className="px-4">
-            <div className="h-2 bg-gray-200 rounded-full">
+          <div className="px-4 mt-2">
+            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-500"
+                className="h-full bg-gradient-to-r from-emerald-500 to-lime-400 transition-all"
                 style={{
                   width: `${Math.min(
                     (profile.donatedAmount / profile.donationGoal) * 100,
@@ -119,24 +121,27 @@ const ProfileDetails = () => {
                 }}
               />
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              ₹{profile.donatedAmount} raised of ₹{profile.donationGoal}
+            </p>
           </div>
 
           {/* DONATE */}
-          <div className="p-4 flex gap-3">
+          <div className="p-4 flex gap-3 bg-emerald-50 rounded-xl mt-3">
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="Amount"
+              placeholder="Enter amount"
               disabled={isGoalAchieved}
-              className="flex-1 border rounded-md px-3 py-2 text-sm"
+              className="flex-1 border border-emerald-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
             />
             <button
               onClick={handleDonate}
               disabled={loading || isGoalAchieved}
-              className="bg-emerald-600 text-white px-5 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+              className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 rounded-md font-semibold hover:scale-105 transition disabled:opacity-50"
             >
-              {isGoalAchieved ? "Completed" : loading ? "..." : "Donate"}
+              {isGoalAchieved ? "Completed ❤️" : loading ? "Processing..." : "Donate Now"}
             </button>
           </div>
 
@@ -149,7 +154,7 @@ const ProfileDetails = () => {
                   <div
                     key={i}
                     onClick={() => setActiveIndex(i)}
-                    className="bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
+                    className="bg-white shadow-md rounded-xl overflow-hidden cursor-pointer hover:scale-105 transition"
                   >
                     {isPDF(url) ? (
                       <div className="h-24 flex items-center justify-center text-sm">
@@ -167,14 +172,20 @@ const ProfileDetails = () => {
 
         {/* MODAL */}
         {activeIndex !== null && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50">
             <button
               onClick={() => setActiveIndex(null)}
               className="absolute top-6 right-6 text-white text-3xl"
             >
               ✕
             </button>
-            {isPDF(proofs[activeIndex]) ? (
+
+            {activeIndex === "profile" ? (
+              <img
+                src={profile.profilePic}
+                className="max-w-[90vw] max-h-[80vh] rounded-xl"
+              />
+            ) : isPDF(proofs[activeIndex]) ? (
               <iframe
                 src={proofs[activeIndex]}
                 className="w-[90vw] h-[80vh] bg-white rounded-xl"
@@ -193,9 +204,9 @@ const ProfileDetails = () => {
 };
 
 const Info = ({ label, value }) => (
-  <div className="bg-gray-50 p-3 rounded-lg">
-    <p className="text-xs text-gray-500">{label}</p>
-    <p className="font-medium text-gray-800">{value || "N/A"}</p>
+  <div className="bg-white border border-gray-100 shadow-sm p-4 rounded-xl">
+    <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
+    <p className="font-semibold text-gray-800 mt-1">{value || "N/A"}</p>
   </div>
 );
 

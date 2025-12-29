@@ -18,9 +18,20 @@ const Login = () => {
       return;
     }
 
-    const success = await logIn(form);
-    if (success) {
-      navigate("/"); // redirect to home/dashboard after login
+    const res = await logIn(form);
+
+    // 🚨 Account exists but not verified
+    if (res?.requiresVerification) {
+      toast.error("Your account is not verified. Please verify your email.");
+      navigate("/signup", {
+        state: { email: form.email },
+      });
+      return;
+    }
+
+    // ✅ Successful login
+    if (res?.success) {
+      navigate("/");
     }
   };
 
@@ -67,7 +78,6 @@ const Login = () => {
           </button>
         </form>
 
-        {/* ✅ Forgot Password link */}
         <div className="text-center mt-4">
           <button
             onClick={() => navigate("/forgot-password")}

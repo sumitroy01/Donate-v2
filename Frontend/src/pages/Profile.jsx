@@ -30,6 +30,7 @@ const Profile = () => {
   });
 
   const [previewFiles, setPreviewFiles] = useState([]);
+  const [profilePreview, setProfilePreview] = useState(null);
 
   const isPDF = (file) => file?.type === "application/pdf";
 
@@ -69,19 +70,18 @@ const Profile = () => {
       });
     }
   }, [profile]);
-
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
-    if (name === "proofs" && files) {
-      const fileArray = Array.from(files);
-      setPreviewFiles(fileArray);
-      setForm((prev) => ({ ...prev, proofs: files }));
+    if (name === "profilePic" && files) {
+      setProfilePreview(files[0]);
+      setForm((prev) => ({ ...prev, profilePic: files[0] }));
       return;
     }
 
-    if (name === "profilePic" && files) {
-      setForm((prev) => ({ ...prev, profilePic: files[0] }));
+    if (name === "proofs" && files) {
+      setPreviewFiles(Array.from(files));
+      setForm((prev) => ({ ...prev, proofs: files }));
       return;
     }
 
@@ -122,12 +122,54 @@ const Profile = () => {
         </h1>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Full Name" className="w-full border rounded p-2" />
-          <input type="number" name="age" value={form.age} onChange={handleChange} placeholder="Age" className="w-full border rounded p-2" />
-          <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" className="w-full border rounded p-2" />
-          <input type="text" name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" className="w-full border rounded p-2" />
-          <input type="text" name="disease" value={form.disease} onChange={handleChange} placeholder="Disease" className="w-full border rounded p-2" />
-          <input type="number" name="donationGoal" value={form.donationGoal} onChange={handleChange} placeholder="Donation Goal" className="w-full border rounded p-2" />
+          <input
+            type="text"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Full Name"
+            className="w-full border rounded p-2"
+          />
+          <input
+            type="number"
+            name="age"
+            value={form.age}
+            onChange={handleChange}
+            placeholder="Age"
+            className="w-full border rounded p-2"
+          />
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="Email"
+            className="w-full border rounded p-2"
+          />
+          <input
+            type="text"
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            placeholder="Phone"
+            className="w-full border rounded p-2"
+          />
+          <input
+            type="text"
+            name="disease"
+            value={form.disease}
+            onChange={handleChange}
+            placeholder="Disease"
+            className="w-full border rounded p-2"
+          />
+          <input
+            type="number"
+            name="donationGoal"
+            value={form.donationGoal}
+            onChange={handleChange}
+            placeholder="Donation Goal ₹(INR)"
+            className="w-full border rounded p-2"
+          />
 
           <textarea
             name="bio"
@@ -137,15 +179,42 @@ const Profile = () => {
             placeholder="Bio"
             className="w-full border rounded p-2"
           />
+          <p className="text-sm font-medium mb-1">Profile Picture</p>
+          <input
+            type="file"
+            name="profilePic"
+            accept="image/*"
+            onChange={handleChange}
+            className="block w-full text-sm text-gray-600
+             file:mr-3 file:py-2 file:px-4
+             file:rounded-md file:border-0
+             file:bg-blue-600 file:text-white
+             hover:file:bg-blue-700"
+          />
+          {profilePreview && (
+            <div className="mt-3">
+              <p className="text-sm font-medium">Profile Picture</p>
+              <img
+                src={URL.createObjectURL(profilePreview)}
+                className="w-24 h-24 rounded-full object-cover border"
+              />
+            </div>
+          )}
 
-          <input type="file" name="profilePic" accept="image/*" onChange={handleChange} />
+          <br />
 
+          <p className="text-sm font-medium mb-1">Proofs (Images / PDFs)</p>
           <input
             type="file"
             name="proofs"
             multiple
             accept="image/*,application/pdf"
             onChange={handleChange}
+            className="block w-full text-sm text-gray-600
+             file:mr-3 file:py-2 file:px-4
+             file:rounded-md file:border-0
+             file:bg-green-600 file:text-white
+             hover:file:bg-green-700"
           />
 
           {/* PREVIEW */}
@@ -180,7 +249,11 @@ const Profile = () => {
               busy ? "bg-emerald-400" : "bg-emerald-600 hover:bg-emerald-700"
             }`}
           >
-            {busy ? "Submitting..." : hasProfile ? "Update Profile" : "Create Profile"}
+            {busy
+              ? "Submitting..."
+              : hasProfile
+              ? "Update Profile"
+              : "Create Profile"}
           </button>
         </form>
       </div>

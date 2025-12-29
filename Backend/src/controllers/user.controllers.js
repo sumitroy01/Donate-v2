@@ -17,59 +17,52 @@ const hashToken = (t) => crypto.createHash("sha256").update(t).digest("hex");
 
 // ================== SIGNUP ==================
 export const signUp = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password)
-      return res.status(400).json({ message: "Name, email and password are required" });
-    if (password.length < 6)
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+  const { name, email, password } = req.body;
 
-   
-    const existing = await User.findOne({ email }).lean();
-    if (existing) return res.status(409).json({ message: "User with this email already exists" });
+  if (!name || !email || !password)
+    return res.status(400).json({ message: "All fields required" });
 
-    const saltRounds = Number(process.env.BCRYPT_ROUNDS) || 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+  const existing = await User.findOne({ email });
 
-    const otp = generateOTP();
-    const otpHash = hashToken(otp);
-    const otpExpires = Date.now() + OTP_TTL_MS;
-
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      isVerified: false,
-      otp: otpHash,
-      otpExpires,
-      lastOtpSentAt: Date.now()
-    });
-
-    try {
-      await user.save();
-    } catch (err) {
-      if (err && err.code === 11000) return res.status(409).json({ message: "Email already registered" });
-      console.error("User save error:", err);
-      return res.status(500).json({ message: "Failed to create user" });
-    }
-
-    
-    res.status(201).json({
-      message: "Registered. OTP sent to email if deliverable. Verify to activate account.",
-      userId: user._id,
-    });
-
-    sendOTPEmail(email, otp)
-      .then(() => console.log("OTP sent to", email))
-      .catch(err => {
-        console.error("OTP send failed for", email, err && err.message);
-      });
-
-  } catch (error) {
-    console.error("Error in signup controller", error);
-    return res.status(500).json({ message: "Internal server error" });
+  if (existing && existing.isVerified) {
+    return res.status(409).json({ message: "User already exists" });
   }
+
+  if (existing && !existing.isVerified) {
+    const otp = generateOTP();
+    existing.otp = hashToken(otp);
+    existing.otpExpires = Date.now() + OTP_TTL_MS;
+    await existing.save();
+
+    sendOTPEmail(email, otp);
+
+    return res.status(200).json({
+      message: "OTP resent",
+      requiresVerification: true,
+    });
+  }
+
+  // New user
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const otp = generateOTP();
+
+  const user = await User.create({
+    name,
+    email,
+    password: hashedPassword,
+    isVerified: false,
+    otp: hashToken(otp),
+    otpExpires: Date.now() + OTP_TTL_MS,
+  });
+
+  sendOTPEmail(email, otp);
+
+  return res.status(201).json({
+    message: "OTP sent",
+    requiresVerification: true,
+  });
 };
+
 
 // ================== VERIFY OTP ==================
 export const verifyOTP = async (req, res) => {
@@ -156,28 +149,32 @@ export const resendOTP = async (req, res) => {
 
 // ================== LOGIN ==================
 export const logIn = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(401).json({ message: "Email and password are required" });
+  const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ message: "User not found" });
-    if (!user.isVerified) return res.status(403).json({ message: "Account not verified. Please verify OTP first." });
+  const user = await User.findOne({ email });
+  if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ message: "Invalid password" });
-
-    const token = generateToken(user._id, res);
-    return res.status(200).json({
-      user: {
-        _id: user._id, name: user.name, email: user.email, isVerified: user.isVerified
-      }, token
+  if (!user.isVerified) {
+    return res.status(403).json({
+      message: "Account not verified",
+      requiresVerification: true,
     });
-  } catch (err) {
-    console.error("Error in login controller:", err);
-    return res.status(500).json({ message: "Internal server error" });
   }
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(401).json({ message: "Invalid credentials" });
+
+  const token = generateToken(user._id, res);
+
+  res.json({
+    user: {
+      _id: user._id,
+      email: user.email,
+    },
+    token,
+  });
 };
+
 
 // ================== LOGOUT ==================
 export const logOut = (req, res) => {

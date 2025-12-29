@@ -86,17 +86,24 @@ const ForgotPassword = () => {
           </>
         ) : (
           <>
-            <h2 className="text-2xl font-semibold text-center mb-6">
-              Reset Password
-            </h2>
-            <form className="space-y-4" onSubmit={handleResetPassword}>
-              <input
-                type="text"
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+          <h2 className="text-2xl font-semibold text-center mb-2">
+  Reset Password
+</h2>
+
+<p className="text-sm text-gray-500 text-center mb-4">
+  Didn’t receive the email? Please check your <span className="font-medium">Spam</span> or
+  <span className="font-medium"> Promotions</span> folder.
+</p>
+
+<form className="space-y-4" onSubmit={handleResetPassword}>
+  <input
+    type="text"
+    placeholder="Enter OTP"
+    value={otp}
+    onChange={(e) => setOtp(e.target.value)}
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+  />
+
 
               <div className="relative">
                 <input
