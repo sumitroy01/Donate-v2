@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: Donate-v2
+    name: donate-v2
     env: static
-    staticPublishPath: build
+    buildCommand: npm run build
+    staticPublishPath: dist
     routes:
       - type: rewrite
-        source: /*
+        source: /.*
         destination: /index.html
